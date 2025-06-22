@@ -383,6 +383,8 @@ struct task_group {
 	struct cfs_rq		**cfs_rq;
 	unsigned long		shares;
 
+	u64			latency_awareness;
+
 	/* A positive value indicates that this is a SCHED_IDLE group. */
 	int			idle;
 
@@ -393,6 +395,7 @@ struct task_group {
 	 * will also be accessed at each tick.
 	 */
 	atomic_long_t		load_avg ____cacheline_aligned;
+	atomic_long_t		load_avg_ema ____cacheline_aligned;
 #endif
 #endif
 
@@ -520,6 +523,8 @@ struct cfs_rq {
 	unsigned int		h_nr_running;      /* SCHED_{NORMAL,BATCH,IDLE} */
 	unsigned int		idle_nr_running;   /* SCHED_IDLE */
 	unsigned int		idle_h_nr_running; /* SCHED_IDLE */
+	unsigned int		curr_latency_awareness;
+	unsigned long		curr_pod_load_avg;
 
 	u64			exec_clock;
 	u64			min_vruntime;

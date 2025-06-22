@@ -10386,6 +10386,47 @@ static u64 cpu_shares_read_u64(struct cgroup_subsys_state *css,
 	return (u64) scale_load_down(tg->shares);
 }
 
+static u64 cpu_latency_awareness_read_u64(struct cgroup_subsys_state *css,
+                               struct cftype *cft)
+{
+        struct task_group *tg = css_tg(css);
+        return tg->latency_awareness;
+}
+
+static int cpu_latency_awareness_write_u64(struct cgroup_subsys_state *css,
+                                struct cftype *cftype, u64 value)
+{
+        struct task_group *tg = css_tg(css);
+        tg->latency_awareness = value;
+        return 0;
+}
+
+static u64 cpu_load_avg_read_u64(struct cgroup_subsys_state *css,
+                               struct cftype *cft)
+{
+        struct task_group *tg = css_tg(css);
+        return atomic_long_read(&tg->load_avg);;
+}
+
+static int cpu_load_avg_write_u64(struct cgroup_subsys_state *css,
+                                struct cftype *cftype, u64 value)
+{
+        return 0;
+}
+
+static u64 cpu_load_avg_ema_read_u64(struct cgroup_subsys_state *css,
+                               struct cftype *cft)
+{
+        struct task_group *tg = css_tg(css);
+        return atomic_long_read(&tg->load_avg_ema);
+}
+
+static int cpu_load_avg_ema_write_u64(struct cgroup_subsys_state *css,
+                                struct cftype *cftype, u64 value)
+{
+        return 0;
+}
+
 #ifdef CONFIG_CFS_BANDWIDTH
 static DEFINE_MUTEX(cfs_constraints_mutex);
 
@@ -10757,6 +10798,21 @@ static struct cftype cpu_legacy_files[] = {
 		.read_u64 = cpu_shares_read_u64,
 		.write_u64 = cpu_shares_write_u64,
 	},
+        {
+                .name = "latency_awareness",
+                .read_u64 = cpu_latency_awareness_read_u64,
+                .write_u64 = cpu_latency_awareness_write_u64,
+        },
+        {
+                .name = "load_avg",
+                .read_u64 = cpu_load_avg_read_u64,
+                .write_u64 = cpu_load_avg_write_u64,
+        },
+        {
+                .name = "load_avg_ema",
+                .read_u64 = cpu_load_avg_ema_read_u64,
+                .write_u64 = cpu_load_avg_ema_write_u64,
+        },
 	{
 		.name = "idle",
 		.read_s64 = cpu_idle_read_s64,
