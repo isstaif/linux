@@ -10798,21 +10798,21 @@ static struct cftype cpu_legacy_files[] = {
 		.read_u64 = cpu_shares_read_u64,
 		.write_u64 = cpu_shares_write_u64,
 	},
-        {
-                .name = "latency_awareness",
-                .read_u64 = cpu_latency_awareness_read_u64,
-                .write_u64 = cpu_latency_awareness_write_u64,
-        },
-        {
-                .name = "load_avg",
-                .read_u64 = cpu_load_avg_read_u64,
-                .write_u64 = cpu_load_avg_write_u64,
-        },
-        {
-                .name = "load_avg_ema",
-                .read_u64 = cpu_load_avg_ema_read_u64,
-                .write_u64 = cpu_load_avg_ema_write_u64,
-        },
+    {
+        .name = "latency_awareness",
+        .read_u64 = cpu_latency_awareness_read_u64,
+        .write_u64 = cpu_latency_awareness_write_u64,
+    },
+    {
+        .name = "load_avg",
+        .read_u64 = cpu_load_avg_read_u64,
+        .write_u64 = cpu_load_avg_write_u64,
+    },
+    {
+        .name = "load_avg_ema",
+        .read_u64 = cpu_load_avg_ema_read_u64,
+        .write_u64 = cpu_load_avg_ema_write_u64,
+    },
 	{
 		.name = "idle",
 		.read_s64 = cpu_idle_read_s64,
@@ -11029,6 +11029,24 @@ static struct cftype cpu_files[] = {
 		.read_s64 = cpu_weight_nice_read_s64,
 		.write_s64 = cpu_weight_nice_write_s64,
 	},
+    {
+        .name = "latency_awareness",
+		.flags = CFTYPE_NOT_ON_ROOT,        
+        .read_u64 = cpu_latency_awareness_read_u64,
+        .write_u64 = cpu_latency_awareness_write_u64,
+    },
+    {
+        .name = "load_avg",
+		.flags = CFTYPE_NOT_ON_ROOT,        
+        .read_u64 = cpu_load_avg_read_u64,
+        .write_u64 = cpu_load_avg_write_u64,
+    },
+    {
+        .name = "load_avg_ema",
+		.flags = CFTYPE_NOT_ON_ROOT,        
+        .read_u64 = cpu_load_avg_ema_read_u64,
+        .write_u64 = cpu_load_avg_ema_write_u64,
+    },	
 	{
 		.name = "idle",
 		.flags = CFTYPE_NOT_ON_ROOT,
