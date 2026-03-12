@@ -8945,6 +8945,25 @@ static void check_preempt_wakeup_fair(struct rq *rq, struct task_struct *p, int 
 	if (cse_is_idle != pse_is_idle)
 		return;
 
+	if (sched_check_preempt_wakeup_latency_awareness == 100){
+		if (!entity_is_task(se) && !entity_is_task(pse)){
+			struct task_group *ctg, *wtg;
+			//latency-awareness patch
+			ctg = group_cfs_rq(se)->tg;
+			wtg = group_cfs_rq(pse)->tg;
+
+			//only preempt the current task if it has a lower priority (i.e. higher load)
+			if (((ctg->latency_awareness) &&  (wtg->latency_awareness))){
+
+				long ctg_load = atomic_long_read(&ctg->load_avg_ema);
+				long wtg_load = atomic_long_read(&wtg->load_avg_ema);
+
+				if (ctg_load > wtg_load) //we can install a threshold here
+					goto preempt; //current has higher load, so preempt it!
+			}
+		}
+	}
+
 	/*
 	 * BATCH and IDLE tasks do not preempt others.
 	 */
