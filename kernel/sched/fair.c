@@ -4150,7 +4150,9 @@ static void update_cfs_group(struct sched_entity *se)
 #ifndef CONFIG_SMP
 	shares = READ_ONCE(gcfs_rq->tg->shares);
 #else
+	if (!sched_disable_calc_group_shares)
 	shares = calc_group_shares(gcfs_rq);
+	else shares = READ_ONCE(gcfs_rq->tg->shares);
 #endif
 	if (unlikely(se->load.weight != shares))
 		reweight_entity(cfs_rq_of(se), se, shares);
