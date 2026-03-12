@@ -4275,6 +4275,7 @@ static inline void update_tg_load_avg(struct cfs_rq *cfs_rq)
 {
 	long delta;
 	u64 now;
+	struct task_group *tg = cfs_rq->tg;
 
 	/*
 	 * No need to update load_avg for root_task_group as it is not used.
@@ -4299,6 +4300,13 @@ static inline void update_tg_load_avg(struct cfs_rq *cfs_rq)
 		atomic_long_add(delta, &cfs_rq->tg->load_avg);
 		cfs_rq->tg_load_avg_contrib = cfs_rq->avg.load_avg;
 		cfs_rq->last_update_tg_load_avg = now;
+	}
+
+	if (sched_tg_load_avg_ema){
+		long prev = atomic_long_read(&tg->load_avg_ema);
+		long curr = atomic_long_read(&tg->load_avg);
+		long delta = ((((curr - prev)*2))/(1+sched_tg_load_avg_ema_window)); //+ prev;
+		atomic_long_add(delta, &tg->load_avg_ema);
 	}
 }
 
