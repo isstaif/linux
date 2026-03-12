@@ -6421,7 +6421,7 @@ static int select_idle_core(struct task_struct *p, int core, struct cpumask *cpu
 	int cpu;
 
 	if (!static_branch_likely(&sched_smt_present))
-		return __select_idle_cpu(core, p); //cpu_has_higher_load_task 6.1
+		return __select_idle_cpu(core, p);
 
 	for_each_cpu(cpu, cpu_smt_mask(core)) {
 		if (!available_idle_cpu(cpu)) {
@@ -6537,14 +6537,14 @@ static int select_idle_cpu(struct task_struct *p, struct sched_domain *sd, bool 
 
 	for_each_cpu_wrap(cpu, cpus, target + 1) {
 		if (has_idle_core) {
-			i = select_idle_core(p, cpu, cpus, &idle_cpu); ////cpu_has_higher_load_task 6.1
+			i = select_idle_core(p, cpu, cpus, &idle_cpu);
 			if ((unsigned int)i < nr_cpumask_bits)
 				return i;
 
 		} else {
 			if (!--nr)
 				return -1;
-			idle_cpu = __select_idle_cpu(cpu, p); //cpu_has_higher_load_task 6.2
+			idle_cpu = __select_idle_cpu(cpu, p);
 			if ((unsigned int)idle_cpu < nr_cpumask_bits)
 				break;
 		}
@@ -6588,7 +6588,7 @@ select_idle_capacity(struct task_struct *p, struct sched_domain *sd, int target)
 	for_each_cpu_wrap(cpu, cpus, target) {
 		unsigned long cpu_cap = capacity_of(cpu);
 
-		if (!available_idle_cpu(cpu) && !sched_idle_cpu(cpu)) //cpu_has_higher_load_task 4 ignore_sched_idle_cpu
+		if (!available_idle_cpu(cpu) && !sched_idle_cpu(cpu))
 			continue;
 		if (fits_capacity(task_util, cpu_cap))
 			return cpu;
@@ -6642,7 +6642,7 @@ static int select_idle_sibling(struct task_struct *p, int prev, int target)
 	 * If the previous CPU is cache affine and idle, don't be stupid:
 	 */
 	if (prev != target && cpus_share_cache(prev, target) &&
-	    (available_idle_cpu(prev) || sched_idle_cpu(prev)) && //cpu_has_higher_load_task 2 ignore_sched_idle_cpu
+	    (available_idle_cpu(prev) || sched_idle_cpu(prev)) &&
 	    asym_fits_capacity(task_util, prev))
 		return prev;
 
@@ -6689,7 +6689,7 @@ static int select_idle_sibling(struct task_struct *p, int prev, int target)
 		 * capacity path.
 		 */
 		if (sd) {
-			i = select_idle_capacity(p, sd, target); //cpu_has_higher_load_task 4
+			i = select_idle_capacity(p, sd, target);
 			return ((unsigned)i < nr_cpumask_bits) ? i : target;
 		}
 	}
@@ -6702,13 +6702,13 @@ static int select_idle_sibling(struct task_struct *p, int prev, int target)
 		has_idle_core = test_idle_cores(target, false);
 
 		if (!has_idle_core && cpus_share_cache(prev, target)) {
-			i = select_idle_smt(p, sd, prev); //cpu_has_higher_load_task 5
+			i = select_idle_smt(p, sd, prev);
 			if ((unsigned int)i < nr_cpumask_bits)
 				return i;
 		}
 	}
 
-	i = select_idle_cpu(p, sd, has_idle_core, target); //cpu_has_higher_load_task 6
+	i = select_idle_cpu(p, sd, has_idle_core, target);
 	if ((unsigned)i < nr_cpumask_bits)
 		return i;
 
