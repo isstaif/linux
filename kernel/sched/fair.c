@@ -636,6 +636,41 @@ static inline bool entity_before(const struct sched_entity *a,
 	return (s64)(a->deadline - b->deadline) < 0;
 }
 
+static inline bool entity_before_tg_load_avg_dynamic(struct sched_entity *a,
+				struct sched_entity *b)
+{
+	struct task_group *tga, *tgb;
+	long tga_load, tgb_load;
+
+	if (!entity_is_task(a) && !entity_is_task(b)){
+
+		tga = group_cfs_rq(a)->tg;
+		tgb = group_cfs_rq(b)->tg;
+
+		//only adjust default policy for pod-level entities
+		if ((tga->latency_awareness) && (tgb->latency_awareness)) {
+
+			tga_load = atomic_long_read(&tga->load_avg_ema);
+			tgb_load = atomic_long_read(&tgb->load_avg_ema);
+
+			if (tga_load < tgb_load) //we can install a threshold here
+				return true; //a has lower load, then goes before
+
+			else //if (tga_load >= tgb_load)
+				return false; //a is not lower load, so does not go before
+
+		} else return entity_before(a,b);
+
+	} else return entity_before(a,b);
+}
+
+static inline bool entity_before_patch(struct sched_entity *a,
+				struct sched_entity *b)
+{
+	if (sched_entity_before_policy == 1) return entity_before_tg_load_avg_dynamic(a,b);
+	else return entity_before(a,b);
+}
+
 static inline s64 entity_key(struct cfs_rq *cfs_rq, struct sched_entity *se)
 {
 	return (s64)(se->vruntime - cfs_rq->min_vruntime);
@@ -884,7 +919,7 @@ static inline u64 cfs_rq_min_slice(struct cfs_rq *cfs_rq)
 
 static inline bool __entity_less(struct rb_node *a, const struct rb_node *b)
 {
-	return entity_before(__node_2_se(a), __node_2_se(b));
+	return entity_before_patch(__node_2_se(a), __node_2_se(b));
 }
 
 #define vruntime_gt(field, lse, rse) ({ (s64)((lse)->field - (rse)->field) > 0; })
@@ -1048,7 +1083,7 @@ static struct sched_entity *pick_eevdf(struct cfs_rq *cfs_rq)
 		node = node->rb_right;
 	}
 found:
-	if (!best || (curr && entity_before(curr, best)))
+	if (!best || (curr && entity_before_patch(curr, best)))
 		best = curr;
 
 	return best;
@@ -1271,7 +1306,7 @@ static inline bool do_preempt_short(struct cfs_rq *cfs_rq,
 	if (!entity_eligible(cfs_rq, pse))
 		return false;
 
-	if (entity_before(pse, se))
+	if (entity_before_patch(pse, se))
 		return true;
 
 	if (!entity_eligible(cfs_rq, se))
