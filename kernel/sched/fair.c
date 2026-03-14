@@ -81,6 +81,7 @@ const_debug unsigned int sysctl_sched_migration_cost	= 500000UL;
 //mechanisms to mitigate contention
 unsigned int sched_disable_calc_group_shares = 0;
 unsigned int sched_disable_vruntime_preemption = 0;
+unsigned int sched_disable_entity_eligible = 1;
 
 // sched_entity_before_policy == 0 entity_before(a,b);
 // sched_entity_before_policy == 1 entity_before_tg_load_avg_dynamic(a,b);
@@ -154,6 +155,13 @@ static struct ctl_table sched_fair_sysctls[] = {
         {
                 .procname       = "sched_disable_vruntime_preemption",
                 .data           = &sched_disable_vruntime_preemption,
+                .maxlen         = sizeof(unsigned int),
+                .mode           = 0644,
+                .proc_handler   = proc_dointvec_minmax,
+        },
+        {
+                .procname       = "sched_disable_entity_eligible",
+                .data           = &sched_disable_entity_eligible,
                 .maxlen         = sizeof(unsigned int),
                 .mode           = 0644,
                 .proc_handler   = proc_dointvec_minmax,
@@ -838,6 +846,7 @@ static int vruntime_eligible(struct cfs_rq *cfs_rq, u64 vruntime)
 
 int entity_eligible(struct cfs_rq *cfs_rq, struct sched_entity *se)
 {
+	if (sched_disable_entity_eligible) return true;
 	return vruntime_eligible(cfs_rq, se->vruntime);
 }
 
