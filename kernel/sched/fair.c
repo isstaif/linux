@@ -8849,9 +8849,13 @@ static struct task_struct *pick_task_fair(struct rq *rq)
 {
 	struct sched_entity *se;
 	struct cfs_rq *cfs_rq;
-
 again:
 	cfs_rq = &rq->cfs;
+
+	struct cfs_rq *cfs_rq_init = cfs_rq;
+	cfs_rq_init->curr_latency_awareness = 0;
+	cfs_rq_init->curr_pod_load_avg = 0;
+
 	if (!cfs_rq->nr_running)
 		return NULL;
 
@@ -13256,6 +13260,7 @@ static void set_next_task_fair(struct rq *rq, struct task_struct *p, bool first)
 void init_cfs_rq(struct cfs_rq *cfs_rq)
 {
 	cfs_rq->tasks_timeline = RB_ROOT_CACHED;
+	cfs_rq->curr_latency_awareness = 0;
 	cfs_rq->min_vruntime = (u64)(-(1LL << 20));
 #ifdef CONFIG_SMP
 	raw_spin_lock_init(&cfs_rq->removed.lock);
@@ -13311,6 +13316,7 @@ int alloc_fair_sched_group(struct task_group *tg, struct task_group *parent)
 		goto err;
 
 	tg->shares = NICE_0_LOAD;
+	tg->latency_awareness = 0;
 
 	init_cfs_bandwidth(tg_cfs_bandwidth(tg), tg_cfs_bandwidth(parent));
 
