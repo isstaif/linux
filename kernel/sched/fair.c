@@ -7045,6 +7045,45 @@ static int sched_idle_cpu(int cpu)
 }
 #endif
 
+//in order for this to work, I need to coordinate as well in the two locations
+//1) check_preempt_wakeup (using set_next_buddy to give priority to least loaded task)
+//2) entity_before (keeping all most loaded task at the back of the queue)
+//         (or via WEIGHT_IDLEPRIO or calc_delta_fair)
+//3) sched_slice (increasing the minimum granularity of tasks)
+
+//please refer to get_experiment_cfspatched_iteration6
+
+static int cpu_has_higher_load_task(struct task_struct *p, int target, int path)
+{
+	if (!sched_cpu_has_higher_load_task) return 0;
+
+	//candidate cpu
+	struct rq *rq = cpu_rq(target);
+
+	unsigned int curr_pod_load_avg = rq->cfs.curr_pod_load_avg;
+
+	//if the currently running entity is not latency aware
+	//then this CPU is defnitely a good target
+	if (!curr_pod_load_avg) return 1;
+
+	//otherwise, we should compare the priority of curr with that of p
+	struct sched_entity *se = &p->se;
+
+	//once you encounter a tg with latency awareness value, do the compare and exit
+	struct task_group *container_tg = cfs_rq_of(se)->tg;
+	struct task_group *pod_tg;
+
+	if (container_tg) {
+		pod_tg = container_tg->parent; //tg corresponding to a pod
+		if (pod_tg && (pod_tg->latency_awareness)){
+			if (atomic_long_read(&pod_tg->load_avg_ema) < curr_pod_load_avg)
+				return 1;
+		} else return 0;
+	}
+
+	return 0;
+}
+
 static void
 requeue_delayed_entity(struct sched_entity *se)
 {
@@ -7600,7 +7639,7 @@ sched_balance_find_dst_group_cpu(struct sched_group *group, struct task_struct *
 		if (!sched_core_cookie_match(rq, p))
 			continue;
 
-		if (sched_idle_cpu(i))
+		if (sched_idle_cpu(i) || cpu_has_higher_load_task(p,i,20))
 			return i;
 
 		if (available_idle_cpu(i)) {
@@ -7691,7 +7730,7 @@ static inline int sched_balance_find_dst_cpu(struct sched_domain *sd, struct tas
 
 static inline int __select_idle_cpu(int cpu, struct task_struct *p)
 {
-	if ((available_idle_cpu(cpu) || sched_idle_cpu(cpu)) &&
+	if ((available_idle_cpu(cpu) || sched_idle_cpu(cpu) || cpu_has_higher_load_task(p, cpu,16)) &&
 	    sched_cpu_cookie_match(cpu_rq(cpu), p))
 		return cpu;
 
@@ -7765,7 +7804,7 @@ static int select_idle_core(struct task_struct *p, int core, struct cpumask *cpu
 		if (!available_idle_cpu(cpu)) {
 			idle = false;
 			if (*idle_cpu == -1) {
-				if (sched_idle_cpu(cpu) && cpumask_test_cpu(cpu, cpus)) {
+				if ((sched_idle_cpu(cpu) || cpu_has_higher_load_task(p, cpu,17)) && cpumask_test_cpu(cpu, cpus)) {
 					*idle_cpu = cpu;
 					break;
 				}
@@ -7800,7 +7839,7 @@ static int select_idle_smt(struct task_struct *p, struct sched_domain *sd, int t
 		 */
 		if (!cpumask_test_cpu(cpu, sched_domain_span(sd)))
 			continue;
-		if (available_idle_cpu(cpu) || sched_idle_cpu(cpu))
+		if (available_idle_cpu(cpu) || sched_idle_cpu(cpu) || cpu_has_higher_load_task(p, cpu,15))
 			return cpu;
 	}
 
@@ -7993,7 +8032,7 @@ static int select_idle_sibling(struct task_struct *p, int prev, int target)
 	 */
 	lockdep_assert_irqs_disabled();
 
-	if ((available_idle_cpu(target) || sched_idle_cpu(target)) &&
+	if ((available_idle_cpu(target) || sched_idle_cpu(target) || cpu_has_higher_load_task(p, target,11)) &&
 	    asym_fits_cpu(task_util, util_min, util_max, target))
 		return target;
 
@@ -8033,7 +8072,7 @@ static int select_idle_sibling(struct task_struct *p, int prev, int target)
 	if (recent_used_cpu != prev &&
 	    recent_used_cpu != target &&
 	    cpus_share_cache(recent_used_cpu, target) &&
-	    (available_idle_cpu(recent_used_cpu) || sched_idle_cpu(recent_used_cpu)) &&
+	    (available_idle_cpu(recent_used_cpu) || sched_idle_cpu(recent_used_cpu) || cpu_has_higher_load_task(p, recent_used_cpu,13)) &&
 	    cpumask_test_cpu(recent_used_cpu, p->cpus_ptr) &&
 	    asym_fits_cpu(task_util, util_min, util_max, recent_used_cpu)) {
 
@@ -9015,6 +9054,12 @@ again:
 
 		if (unlikely(check_cfs_rq_runtime(cfs_rq)))
 			goto again;
+
+		if (cfs_rq->tg->latency_awareness && !cfs_rq_init->curr_latency_awareness) {
+			//we assume the first latency awwareness flag from the top corresponds to a pod
+			cfs_rq_init->curr_pod_load_avg = atomic_long_read(&cfs_rq->tg->load_avg_ema);
+			cfs_rq_init->curr_latency_awareness = cfs_rq->tg->latency_awareness;
+		}
 
 		se = pick_next_entity(rq, cfs_rq);
 		if (!se)
