@@ -78,6 +78,91 @@ static unsigned int normalized_sysctl_sched_base_slice	= 750000ULL;
 
 const_debug unsigned int sysctl_sched_migration_cost	= 500000UL;
 
+//mechanisms to mitigate contention
+unsigned int sched_disable_calc_group_shares = 0;
+unsigned int sched_disable_vruntime_preemption = 0;
+
+// sched_entity_before_policy == 0 entity_before(a,b);
+// sched_entity_before_policy == 1 entity_before_tg_load_avg_dynamic(a,b);
+unsigned int sched_entity_before_policy = 0;
+unsigned int sched_check_preempt_wakeup_latency_awareness = 0;
+unsigned int sched_cpu_has_higher_load_task = 0;
+
+unsigned int sched_tg_load_avg_ema = 0;
+unsigned int sched_tg_load_avg_ema_window = 0;
+
+#ifdef CONFIG_SYSCTL
+static int sched_latency_awareness_handler(const struct ctl_table *table, int write, void *buffer,
+                size_t *lenp, loff_t *ppos);
+static struct ctl_table sched_cfs_latency_awareness_sysctls[] = {
+        {
+                .procname       = "sched_disable_calc_group_shares",
+                .data           = &sched_disable_calc_group_shares,
+                .maxlen         = sizeof(unsigned int),
+                .mode           = 0644,
+                .proc_handler   = sched_latency_awareness_handler,
+        },
+        {
+                .procname       = "sched_disable_vruntime_preemption",
+                .data           = &sched_disable_vruntime_preemption,
+                .maxlen         = sizeof(unsigned int),
+                .mode           = 0644,
+                .proc_handler   = sched_latency_awareness_handler,
+        },
+        {
+                .procname       = "sched_entity_before_policy",
+                .data           = &sched_entity_before_policy,
+                .maxlen         = sizeof(unsigned int),
+                .mode           = 0644,
+                .proc_handler   = sched_latency_awareness_handler,
+        },
+        {
+                .procname       = "sched_check_preempt_wakeup_latency_awareness",
+                .data           = &sched_check_preempt_wakeup_latency_awareness,
+                .maxlen         = sizeof(unsigned int),
+                .mode           = 0644,
+                .proc_handler   = sched_latency_awareness_handler,
+        },
+        {
+                .procname       = "sched_cpu_has_higher_load_task",
+                .data           = &sched_cpu_has_higher_load_task,
+                .maxlen         = sizeof(unsigned int),
+                .mode           = 0644,
+                .proc_handler   = sched_latency_awareness_handler,
+        },
+        {
+                .procname       = "sched_tg_load_avg_ema",
+                .data           = &sched_tg_load_avg_ema,
+                .maxlen         = sizeof(unsigned int),
+                .mode           = 0644,
+                .proc_handler   = sched_latency_awareness_handler,
+        },
+        {
+                .procname       = "sched_tg_load_avg_ema_window",
+                .data           = &sched_tg_load_avg_ema_window,
+                .maxlen         = sizeof(unsigned int),
+                .mode           = 0644,
+                .proc_handler   = sched_latency_awareness_handler,
+        },
+ {}
+};
+
+static int __init sched_cfs_latency_awareness_sysctl_init(void)
+{
+        register_sysctl_init("kernel", sched_cfs_latency_awareness_sysctls);
+        return 0;
+}
+late_initcall(sched_cfs_latency_awareness_sysctl_init);
+#endif
+
+static int sched_latency_awareness_handler(const struct ctl_table *table, int write, void *buffer,
+                size_t *lenp, loff_t *ppos)
+{
+        int ret;
+        ret = proc_dointvec(table, write, buffer, lenp, ppos);
+        return ret;
+}
+
 static int __init setup_sched_thermal_decay_shift(char *str)
 {
 	pr_warn("Ignoring the deprecated sched_thermal_decay_shift= option\n");
