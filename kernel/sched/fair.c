@@ -92,7 +92,7 @@ unsigned int sched_tg_load_avg_ema = 0;
 unsigned int sched_tg_load_avg_ema_window = 0;
 
 #ifdef CONFIG_SYSCTL
-static int sched_latency_awareness_handler(struct ctl_table *table, int write, void *buffer,
+static int sched_latency_awareness_handler(const struct ctl_table *table, int write, void *buffer,
                 size_t *lenp, loff_t *ppos);
 static struct ctl_table sched_cfs_latency_awareness_sysctls[] = {
         {
@@ -155,7 +155,7 @@ static int __init sched_cfs_latency_awareness_sysctl_init(void)
 late_initcall(sched_cfs_latency_awareness_sysctl_init);
 #endif
 
-static int sched_latency_awareness_handler(struct ctl_table *table, int write, void *buffer,
+static int sched_latency_awareness_handler(const struct ctl_table *table, int write, void *buffer,
                 size_t *lenp, loff_t *ppos)
 {
         int ret;
