@@ -846,7 +846,7 @@ static int vruntime_eligible(struct cfs_rq *cfs_rq, u64 vruntime)
 
 int entity_eligible(struct cfs_rq *cfs_rq, struct sched_entity *se)
 {
-	if (sched_disable_entity_eligible) return true;
+	if (sched_disable_entity_eligible && cfs_rq->tg->latency_awareness) return true;
 	return vruntime_eligible(cfs_rq, se->vruntime);
 }
 
