@@ -9023,13 +9023,12 @@ static struct task_struct *pick_task_fair(struct rq *rq)
 {
 	struct sched_entity *se;
 	struct cfs_rq *cfs_rq;
-again:
 	cfs_rq = &rq->cfs;
-
 	struct cfs_rq *cfs_rq_init = cfs_rq;
 	cfs_rq_init->curr_latency_awareness = 0;
 	cfs_rq_init->curr_pod_load_avg = 0;
-
+again:
+	cfs_rq = &rq->cfs;
 	if (!cfs_rq->nr_running)
 		return NULL;
 
